@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>点方块</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: sans-serif;
+}
+
+body {
+  background: #000000;
+  color: #ffffff;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#setting {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  z-index: 999;
+}
+
+#setting h2 {
+  font-size: 34px;
+  font-weight: 600;
+  color: #fff;
+}
+
+#setting select,
+#setting input {
+  width: 240px;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  background: #f1f1f1;
+  font-size: 18px;
+  text-align: center;
+  outline: none;
+}
+
+#setting button {
+  width: 240px;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  background: #2185f5;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+#gameUI {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  margin: 10px;
+  font-size: 16px;
+}
+
+.pause-btn {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.combo {
+  color: #ffd333;
+}
+.record{
+  color:#4cd964;
+}
+
+#game {
+  width: calc(100% - 20px);
+  height: calc(100vh - 160px);
+  margin: 0 10px;
+  background: #050505;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #222;
+}
+
+.normal {
+  width: 50px;
+  height: 50px;
+  background: #2185f5;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  position: absolute;
+  box-shadow: 0 0 15px #2185f550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.normal:active{transform:scale(0.85);}
+
+.bomb {
+  width: 54px;
+  height: 54px;
+  background: #e53935;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: bold;
+  position: absolute;
+  box-shadow: 0 0 15px #e5393550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bomb:active{transform:scale(0.85);}
+
+.bomb.warn {
+  animation: warn 0.6s infinite;
+}
+@keyframes warn{0%{opacity:0.7}50%{opacity:1}100%{opacity:0.7}}
+
+.gold {
+  width: 42px;
+  height: 42px;
+  background: #ffc107;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #000;
+  font-weight: bold;
+  position: absolute;
+  box-shadow: 0 0 15px #ffc10750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.gold:active{transform:scale(0.85);}
+
+.item-hide{
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.fly{position:absolute;font-size:18px;font-weight:bold;z-index:10;animation:f 0.5s forwards}
+@keyframes f{to{transform:translateY(-30px);opacity:0}}
+
+/* 暂停层 */
+.pause-mask{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  flex-direction: column;
+  justify-content:center;
+  align-items:center;
+  gap: 20px;
+  font-size:32px;
+  color:#fff;
+  z-index:998;
+}
+
+.pause-mask button{
+  padding: 12px 28px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: none;
+  background: #2185f5;
+  color: #fff;
+  cursor: pointer;
+}
+
+.restart-pause-btn{
+  background: #ff9800 !important;
+}
+
+.back-btn{
+  background: #e53935 !important;
+}
+
+/* 炸屏特效 */
+.screen-boom{
+  animation: screenBoom 0.4s ease;
+}
+@keyframes screenBoom{
+  0%{transform: scale(1);filter: brightness(1);}
+  50%{transform: scale(1.05);filter: brightness(2);}
+  100%{transform: scale(1);filter: brightness(1);}
+}
+
+/* 连击闪光特效 */
+.combo-light{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:rgba(255,211,51,0.15);
+  animation:comboFlash 0.3s ease forwards;
+}
+@keyframes comboFlash{0%{opacity:1}100%{opacity:0;}}
+
+/* 点击波纹特效 */
+.ripple{
+  position:absolute;
+  border-radius:50%;
+  animation:rippleEff 0.6s ease-out forwards;
+}
+@keyframes rippleEff{
+  0%{transform:scale(0.5);opacity:0.6;}
+  100%{transform:scale(2);opacity:0;}
+}
+
+.over{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.95);
+  display:grid;
+  place-items:center;
+  font-size:30px;
+  z-index:999;
+  gap:15px;
+}
+.over button{
+  margin-top:10px;
+  padding:14px 30px;
+  border-radius:12px;
+  border:none;
+  background: #2185f5;
+  color:#fff;
+  font-size:18px;
+  cursor: pointer;
+}
+.over .over-back{
+  background: #e53935;
+}
+</style>
+</head>
+<body>
+
+<div id="setting">
+  <h2>游戏设置</h2>
+  <select id="diff">
+    <option value="easy">简单</option>
+    <option value="normal" selected>普通</option>
+    <option value="hard">困难</option>
+    <option value="crazy">极限</option>
+  </select>
+  <input type="number" id="setTime" value="60">
+  <button onclick="startGame()">开始游戏</button>
+</div>
+
+<div id="gameUI">
+  <div class="combo">COMBO ×<span id="combo">0</span></div>
+  <div>分数：<span id="score">0</span></div>
+  <div class="record">最高：<span id="highScore">0</span></div>
+  <div>时间：<span id="time">60</span></div>
+  <button class="pause-btn" id="pauseBtn">暂停</button>
+</div>
+
+<div id="game"></div>
+<div class="pause-mask" id="pauseMask">
+  <div>游戏暂停</div>
+  <button id="continueBtn">继续游戏</button>
+  <button id="pauseRestartBtn" class="restart-pause-btn">重新开始</button>
+  <button id="backBtn" class="back-btn">返回主界面</button>
+</div>
+
+<script>
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+let bgmLoop = null
+let gamePaused = false
+
+let combo = 0, score = 0, time = 60
+let speed = 1600, maxCount = 5
+let gameTimer = null, timeTimer = null
+
+// 最高纪录 本地存储
+let highScore = localStorage.getItem('blockHighScore') || 0;
+const highScoreEl = document.getElementById('highScore');
+highScoreEl.textContent = highScore;
+
+const game = document.getElementById('game')
+const scoreEl = document.getElementById('score')
+const timeEl = document.getElementById('time')
+const comboEl = document.getElementById('combo')
+const pauseBtn = document.getElementById('pauseBtn')
+const pauseMask = document.getElementById('pauseMask')
+const continueBtn = document.getElementById('continueBtn')
+const backBtn = document.getElementById('backBtn')
+const pauseRestartBtn = document.getElementById('pauseRestartBtn')
+
+// 暂停逻辑
+pauseBtn.onclick = () => {
+  gamePaused = true
+  pauseMask.style.display = "flex"
+}
+continueBtn.onclick = () => {
+  gamePaused = false
+  pauseMask.style.display = "none"
+}
+// 暂停页 重新开始
+pauseRestartBtn.onclick = () => {
+  pauseMask.style.display = "none";
+  restartGame();
+}
+// 返回主界面
+backBtn.onclick = () => {
+  backToSetting();
+}
+
+// 统一返回主界面方法
+function backToSetting(){
+  clearInterval(gameTimer);
+  clearInterval(timeTimer);
+  stopBGM();
+  game.innerHTML = "";
+  gamePaused = false;
+  pauseMask.style.display = "none";
+  document.querySelector('.over')?.remove();
+  document.getElementById('gameUI').style.display = "none";
+  document.getElementById('setting').style.display = "flex";
+}
+
+// 炸屏震动高亮
+function boomEffect(){
+  document.body.classList.add('screen-boom');
+  setTimeout(()=>{
+    document.body.classList.remove('screen-boom');
+  },400)
+}
+
+// 连击闪光特效
+function comboLight(){
+  if(combo >= 5){
+    let light = document.createElement('div');
+    light.className = 'combo-light';
+    document.body.appendChild(light);
+    setTimeout(()=>light.remove(),300);
+  }
+}
+
+// 点击波纹特效
+function createRipple(x,y,color){
+  let ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  ripple.style.left = x + 'px';
+  ripple.style.top = y + 'px';
+  ripple.style.width = '50px';
+  ripple.style.height = '50px';
+  ripple.style.background = color;
+  game.appendChild(ripple);
+  setTimeout(()=>ripple.remove(),600);
+}
+
+function spawnOne() {
+  if (gamePaused) return;
+  let now = game.children.length;
+  if (now >= maxCount) return;
+
+  let r = Math.random();
+  let b = document.createElement('div');
+  let x = Math.random() * (game.clientWidth - 60);
+  let y = Math.random() * (game.clientHeight - 60);
+  b.style.left = x + "px";
+  b.style.top = y + "px";
+
+  let clicked = false;
+  let isBomb = false;
+
+  if (r < 0.5) {
+    b.className = "normal";
+    b.textContent = "+";
+  } else if (r < 0.85) {
+    b.className = "bomb warn";
+    b.textContent = "炸";
+    isBomb = true;
+  } else {
+    b.className = "gold";
+    b.textContent = "+";
+  }
+
+  b.onclick = (e) => {
+    if (gamePaused || clicked) return;
+    clicked = true;
+    if (b.classList.contains("normal")) {
+      score++; combo++; 
+      playSound("good");
+      createRipple(x,y,'rgba(33,133,245,0.3)');
+      comboLight();
+    } else if (isBomb) {
+      score = Math.max(0, score - 5); combo = 0; 
+      playSound("bad");
+      boomEffect();
+      createRipple(x,y,'rgba(229,57,53,0.3)');
+    } else {
+      score += 3; combo++; 
+      playSound("gold");
+      createRipple(x,y,'rgba(255,193,7,0.3)');
+      comboLight();
+    }
+    updateUI();
+    b.remove();
+  }
+
+  let remain = speed;
+  let countDown = setInterval(() => {
+    if(gamePaused) return;
+    remain -= 50;
+    if(remain <= 0){
+      clearInterval(countDown);
+      if (clicked) return;
+      b.classList.add("item-hide");
+      setTimeout(()=>{
+        if (!isBomb) {
+          score = Math.max(0, score - 1);
+          flyText("-1", x, y, "#f44336");
+          updateUI();
+        }
+        b.remove();
+      },300)
+    }
+  },50)
+
+  game.appendChild(b);
+}
+
+function updateUI() {
+  scoreEl.textContent = score;
+  comboEl.textContent = combo;
+  // 实时更新最高分
+  if(score > highScore){
+    highScore = score;
+    localStorage.setItem('blockHighScore',highScore);
+    highScoreEl.textContent = highScore;
+  }
+}
+
+function flyText(text, x, y, color) {
+  let f = document.createElement("div");
+  f.className = "fly";
+  f.innerText = text;
+  f.style.left = x + "px";
+  f.style.top = y + "px";
+  f.style.color = color;
+  game.appendChild(f);
+  setTimeout(() => f.remove(), 500);
+}
+
+function playSound(type) {
+  const o = audioCtx.createOscillator()
+  const g = audioCtx.createGain()
+  o.connect(g)
+  g.connect(audioCtx.destination)
+  if (type === 'good') {
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+  } else if (type === 'bad') {
+    o.type = 'triangle'; o.frequency.value = 150;
+    g.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+  } else if (type === 'gold') {
+    o.type = 'sine'; o.frequency.value = 1320;
+    g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+  }
+  o.start(); o.stop(audioCtx.currentTime + 0.6);
+}
+
+function startBGM() {
+  if (bgmLoop) return
+  let idx = 0
+  const notes = [330, 330, 349, 392, 392, 349, 330, 294]
+  bgmLoop = setInterval(() => {
+    const o = audioCtx.createOscillator()
+    const g = audioCtx.createGain()
+    o.connect(g)
+    g.connect(audioCtx.destination)
+    o.type = 'sine'
+    o.frequency.value = notes[idx % notes.length]
+    g.gain.setValueAtTime(0.12, audioCtx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35)
+    o.start()
+    o.stop(audioCtx.currentTime + 0.35)
+    idx++
+  }, 420)
+}
+function stopBGM() { clearInterval(bgmLoop); bgmLoop = null }
+
+// 本局重新开始
+function restartGame(){
+  clearInterval(gameTimer);
+  clearInterval(timeTimer);
+  stopBGM();
+  document.querySelector('.over')?.remove();
+  startGame();
+}
+
+function startGame() {
+  audioCtx.resume();
+  stopBGM(); startBGM();
+  document.getElementById('setting').style.display = 'none';
+  document.getElementById('gameUI').style.display = 'flex';
+
+  let diff = document.getElementById('diff').value
+  time = +document.getElementById('setTime').value || 60
+  if (diff === 'easy') speed = 1800, maxCount = 3
+  if (diff === 'normal') speed = 1600, maxCount = 5
+  if (diff === 'hard') speed = 900, maxCount = 7
+  if (diff === 'crazy') speed = 500, maxCount = 9
+
+  score = 0; combo = 0;
+  updateUI();
+  timeEl.textContent = time;
+  game.innerHTML = "";
+  gamePaused = false
+  pauseMask.style.display = "none"
+
+  clearInterval(gameTimer);
+  gameTimer = setInterval(spawnOne, 450);
+  
+  clearInterval(timeTimer)
+  timeTimer = setInterval(() => {
+    if (gamePaused) return;
+    time--;
+    timeEl.textContent = time;
+    if (time <= 0) {
+      clearInterval(gameTimer);
+      clearInterval(timeTimer);
+      stopBGM();
+      let d = document.createElement('div')
+      d.className = 'over'
+      d.innerHTML = `
+        游戏结束<br>
+        本次得分：${score}<br>
+        最高纪录：${highScore}<br>
+        <button onclick="restartGame()">重新开始</button>
+        <button class="over-back" onclick="backToSetting()">返回主界面</button>
+      `
+      document.body.appendChild(d)
+    }
+  }, 1000);
+}
+</script>
+</body>
+</html>
